@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Facebook Login</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(0deg, #1F162E 0%, #000000 100%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .fb-login-button {
+            margin-top: 20px;
+        }
+
+        .message {
+            color: white;
+            margin-top: 20px;
+        }
+
+        .page-list {
+            margin-top: 20px;
+            color: white;
+        }
+
+        .page-item {
+            cursor: pointer;
+            padding: 10px;
+            background-color: #333;
+            border: 1px solid #444;
+            margin-top: 5px;
+        }
+
+        .page-item:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Facebook Login Button -->
+        <fb:login-button 
+            scope="public_profile,email,pages_show_list,pages_read_engagement,pages_manage_metadata" 
+            onlogin="checkLoginState();">
+        </fb:login-button>
+        <div class="message" id="message"></div>
+        <div class="page-list" id="page-list"></div>
+    </div>
+
+    <script>
+        // Load the Facebook SDK for JavaScript
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId      : '1536476830334014', 
+                cookie     : true,
+                xfbml      : true,
+                version    : 'v20.0' 
+            });
+
+            FB.AppEvents.logPageView();   
+        };
+
+        (function(d, s, id){
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {return;}
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+        function checkLoginState() {
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
+            });
+        }
+
+        function statusChangeCallback(response) {
+            if (response.status === 'connected') {
+                const shortLivedUserAccessToken = response.authResponse.accessToken;
+                console.log('Short-Lived User Access Token:', shortLivedUserAccessToken);
+                fetchUserPages(shortLivedUserAccessToken);
+            } else {
+                console.log('User not authenticated');
+                displayMessage('User not authenticated');
+            }
+        }
+
+        function fetchUserPages(token) {
+            FB.api('/me/accounts', 'GET', { access_token: token }, function(response) {
+                if (response && !response.error) {
+                    displayPages(response.data);
+                } else {
+                    displayMessage('Error fetching pages');
+                    console.error('Error:', response.error);
+                }
+            });
+        }
+
+        function displayPages(pages) {
+            const pageList = document.getElementById('page-list');
+            pageList.innerHTML = '';
+
+            pages.forEach(page => {
+                const pageItem = document.createElement('div');
+                pageItem.className = 'page-item';
+                pageItem.innerText = page.name;
+                pageItem.onclick = () => selectPage(page.id, page.access_token);
+                pageList.appendChild(pageItem);
+            });
+        }
+
+        function selectPage(pageId, pageAccessToken) {
+            fetch('/subscribe-page', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ pageId, pageAccessToken })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayMessage('Successfully subscribed to the page');
+                } else {
+                    displayMessage('Error subscribing to the page: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                displayMessage('Error: ' + error.message);
+            });
+        }
+
+        function displayMessage(message) {
+            document.getElementById('message').innerText = message;
+        }
+    </script>
+</body>
+</html>
