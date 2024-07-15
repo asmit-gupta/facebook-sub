@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Facebook Login</title>
+    <title>Facebook Page Subscription</title>
     <style>
         body, html {
             height: 100%;
@@ -11,10 +11,21 @@
             align-items: center;
             background: linear-gradient(0deg, #1F162E 0%, #000000 100%);
             font-family: Arial, sans-serif;
+            color: white;
         }
 
         .container {
             text-align: center;
+            max-width: 600px;
+        }
+
+        .logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
         }
 
         .fb-login-button {
@@ -22,13 +33,18 @@
         }
 
         .message {
-            color: white;
             margin-top: 20px;
+            font-size: 1.2em;
+            padding: 10px;
+            border: 2px solid #444;
+            border-radius: 5px;
+            background-color: #333;
         }
 
         .page-list {
             margin-top: 20px;
-            color: white;
+            padding: 0;
+            list-style-type: none;
         }
 
         .page-item {
@@ -37,22 +53,38 @@
             background-color: #333;
             border: 1px solid #444;
             margin-top: 5px;
+            border-radius: 5px;
         }
 
         .page-item:hover {
             background-color: #555;
         }
+
+        .header {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
+    <div class="logo">CladBe</div>
     <div class="container">
+        <div class="header">Facebook Page Subscription</div>
+        <div class="description">Log in with Facebook and select a page to subscribe to the app.</div>
+        
         <!-- Facebook Login Button -->
         <fb:login-button 
             scope="public_profile,email,pages_show_list,pages_read_engagement,pages_manage_metadata" 
             onlogin="checkLoginState();">
         </fb:login-button>
+        
         <div class="message" id="message"></div>
-        <div class="page-list" id="page-list"></div>
+        <ul class="page-list" id="page-list"></ul>
     </div>
 
     <script>
@@ -89,7 +121,7 @@
                 fetchUserPages(shortLivedUserAccessToken);
             } else {
                 console.log('User not authenticated');
-                displayMessage('User not authenticated');
+                displayMessage('User not authenticated', true);
             }
         }
 
@@ -98,7 +130,7 @@
                 if (response && !response.error) {
                     displayPages(response.data);
                 } else {
-                    displayMessage('Error fetching pages');
+                    displayMessage('Error fetching pages', true);
                     console.error('Error:', response.error);
                 }
             });
@@ -109,7 +141,7 @@
             pageList.innerHTML = '';
 
             pages.forEach(page => {
-                const pageItem = document.createElement('div');
+                const pageItem = document.createElement('li');
                 pageItem.className = 'page-item';
                 pageItem.innerText = page.name;
                 pageItem.onclick = () => selectPage(page.id, page.access_token);
@@ -130,17 +162,19 @@
                 if (data.success) {
                     displayMessage('Successfully subscribed to the page');
                 } else {
-                    displayMessage('Error subscribing to the page: ' + data.message);
+                    displayMessage('Error subscribing to the page: ' + data.message, true);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                displayMessage('Error: ' + error.message);
+                displayMessage('Error: ' + error.message, true);
             });
         }
 
-        function displayMessage(message) {
-            document.getElementById('message').innerText = message;
+        function displayMessage(message, isError = false) {
+            const messageElement = document.getElementById('message');
+            messageElement.innerText = message;
+            messageElement.style.backgroundColor = isError ? '#d9534f' : '#5cb85c'; 
         }
     </script>
 </body>
