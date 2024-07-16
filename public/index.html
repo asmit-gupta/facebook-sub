@@ -10,13 +10,17 @@
             justify-content: center;
             align-items: center;
             background: linear-gradient(0deg, #1F162E 0%, #000000 100%);
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             color: white;
         }
 
         .container {
             text-align: center;
             max-width: 600px;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         }
 
         .logo {
@@ -54,6 +58,7 @@
             border: 1px solid #444;
             margin-top: 5px;
             border-radius: 5px;
+            transition: background-color 0.3s;
         }
 
         .page-item:hover {
@@ -68,6 +73,52 @@
         .description {
             font-size: 1.1em;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-button {
+            margin-left: 10px;
+            cursor: pointer;
+            font-style: italic;
+            border: 2px solid #c9c2c2;
+            background: none;
+            color: #fff;
+            font-size: 1.2em;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .info-button:hover {
+            background-color: #fff;
+            color: #000;
+        }
+
+        .tooltip {
+            display: none;
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            width: 300px;
+            text-align: left;
+            font-size: 0.9em;
+            z-index: 10;
+        }
+
+        .info-button:hover .tooltip {
+            display: block;
         }
     </style>
 </head>
@@ -75,7 +126,25 @@
     <div class="logo">CladBe</div>
     <div class="container">
         <div class="header">Facebook Page Subscription</div>
-        <div class="description">Log in with Facebook and select a page to subscribe to the app.</div>
+        <div class="description">
+            Log in with Facebook and select pages to subscribe to the app.
+            <button class="info-button">i
+                <div class="tooltip">
+                    <strong>Permissions we are requesting:</strong>
+                    <ul>
+                        <li>Public profile</li>
+                        <li>Email</li>
+                        <li>Pages show list</li>
+                        <li>Pages read engagement</li>
+                        <li>Pages manage metadata</li>
+                        <li>Ads read</li>
+                        <li>Leads retrieval</li>
+                        <li>Pages manage ads</li>
+                        <li>Ads management</li>
+                    </ul>
+                </div>
+            </button>
+        </div>
         
         <!-- Facebook Login Button -->
         <fb:login-button 
@@ -86,6 +155,7 @@
         
         <div class="message" id="message"></div>
         <ul class="page-list" id="page-list"></ul>
+        <button id="subscribe-button" onclick="subscribeSelectedPages()" style="display: none;">Subscribe Selected Pages</button>
     </div>
 
     <script>
@@ -139,37 +209,52 @@
 
         function displayPages(pages) {
             const pageList = document.getElementById('page-list');
+            const subscribeButton = document.getElementById('subscribe-button');
             pageList.innerHTML = '';
 
-            pages.forEach(page => {
-                const pageItem = document.createElement('li');
-                pageItem.className = 'page-item';
-                pageItem.innerText = page.name;
-                pageItem.onclick = () => selectPage(page.id, page.access_token);
-                pageList.appendChild(pageItem);
-            });
+            if (pages.length > 0) {
+                pages.forEach(page => {
+                    const pageItem = document.createElement('li');
+                    pageItem.className = 'page-item';
+                    pageItem.innerHTML = `<input type="checkbox" value="${page.id},${page.access_token}"> ${page.name}`;
+                    pageList.appendChild(pageItem);
+                });
+                subscribeButton.style.display = 'block';
+            } else {
+                subscribeButton.style.display = 'none';
+            }
         }
 
-        function selectPage(pageId, pageAccessToken) {
-            fetch('/subscribe-page', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ pageId, pageAccessToken })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    displayMessage('Successfully subscribed to the page');
-                } else {
-                    displayMessage('Error subscribing to the page: ' + data.message, true);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                displayMessage('Error: ' + error.message, true);
+        function subscribeSelectedPages() {
+            const checkboxes = document.querySelectorAll('.page-item input[type="checkbox"]:checked');
+            const pages = Array.from(checkboxes).map(checkbox => {
+                const [pageId, pageAccessToken] = checkbox.value.split(',');
+                return { pageId, pageAccessToken };
             });
+
+            if (pages.length > 0) {
+                fetch('/subscribe-pages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ pages })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMessage('Successfully subscribed to the selected pages');
+                    } else {
+                        displayMessage('Error subscribing to the pages: ' + data.message, true);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    displayMessage('Error: ' + error.message, true);
+                });
+            } else {
+                displayMessage('No pages selected', true);
+            }
         }
 
         function displayMessage(message, isError = false) {

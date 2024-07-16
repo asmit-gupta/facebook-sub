@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000;
 
 
 const appId = '1536476830334014'; 
@@ -29,28 +29,19 @@ app.post('/exchange-token', async (req, res) => {
     }
 });
 
-// Endpoint to subscribe to a selected page
-app.post('/subscribe-page', async (req, res) => {
-    const { pageId, pageAccessToken } = req.body;
+// Endpoint to subscribe to multiple pages
+app.post('/subscribe-pages', async (req, res) => {
+    const { pages } = req.body;
 
     try {
-        // Subscribe the app to the page
-        const response = await subscribeAppToPage(pageId, pageAccessToken);
-        
-        res.json({ success: true, data: response });
+        const results = await Promise.all(pages.map(page => subscribeAppToPage(page.pageId, page.pageAccessToken)));
+        res.json({ success: true, data: results });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Function to get a Long-Lived User Access Token
-async function getLongLivedUserAccessToken(shortLivedUserAccessToken) {
-    const url = `https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${shortLivedUserAccessToken}`;
-    const response = await axios.get(url);
-    return response.data.access_token;
-}
-
-// Function to subscribe the app to the page
+// Function to subscribe the app to a page
 async function subscribeAppToPage(pageId, pageAccessToken) {
     const url = `https://graph.facebook.com/${pageId}/subscribed_apps`;
     const params = {
@@ -60,6 +51,15 @@ async function subscribeAppToPage(pageId, pageAccessToken) {
     const response = await axios.post(url, null, { params });
     return response.data;
 }
+
+// Function to get a Long-Lived User Access Token
+async function getLongLivedUserAccessToken(shortLivedUserAccessToken) {
+    const url = `https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${shortLivedUserAccessToken}`;
+    const response = await axios.get(url);
+    return response.data.access_token;
+}
+
+
 
 // Serve index.html on the root path
 app.get('*', (req, res) => {
